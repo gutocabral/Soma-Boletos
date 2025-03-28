@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="author" content="Guto Cabral" />
+    <meta name="contact" content="https://github.com/gutocabral" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soma Boletos</title>
+    
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .status-bar {
+            background-color: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color 0.3s;
+        }
+
+        .status-bar.success {
+            background-color: #d4edda;
+        }
+
+        .status-bar.error {
+            background-color: #f8d7da;
+        }
+
+        .total-value {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #0066cc;
+            cursor: pointer;
+        }
+
+        .total-value:hover {
+            opacity: 0.8;
+        }
+
+        .barcode-input {
+            position: fixed;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: white;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .sequence-number {
+            width: 50px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .expired {
+            color: #dc3545;
+            font-weight: 500;
+        }
+
+        .modified-value {
+            color: #dc3545;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+
+        .btn-primary {
+            background-color: #0066cc;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+
+        .btn-edit {
+            background-color: #ffc107;
+            color: black;
+            margin-right: 5px;
+        }
+
+        .btn-edit:hover {
+            background-color: #e0a800;
+        }
+
+        .btn-delete {
+            background-color: #dc3545;
+            color: white;
+            margin-right: 5px;
+        }
+
+        .btn-delete:hover {
+            background-color: #c82333;
+        }
+
+        .value-input {
+            width: 100px;
+            padding: 5px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+        }
+
+        .action-buttons {
+            white-space: nowrap;
+        }
+
+        .revert-value {
+            cursor: pointer;
+            margin-left: 5px;
+        }
+        
+        .btn-help {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .btn-help:hover {
+            background-color: #5a6268;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            position: relative;
+            background-color: #fff;
+            margin: 50px auto;
+            padding: 20px;
+            width: 80%;
+            max-width: 800px;
+            border-radius: 8px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-close {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .modal-close:hover {
+            color: #000;
+        }
+
+        .help-section {
+            margin-bottom: 30px;
+        }
+
+        .help-section h2 {
+            color: #0066cc;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 5px;
+        }
+
+        .help-section p, .help-section li {
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .help-section ul {
+            padding-left: 20px;
+        }
+
+        .about-section {
+            text-align: right;
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .about-section a {
+            color: #0066cc;
+            text-decoration: none;
+        }
+
+        .about-section a:hover {
+            text-decoration: underline;
+        }
+
+    </style>
+    
+    <noscript>
+        <style>
+            .container { display: none !important }
+        </style> 
+    </noscript>
+        
+</head>
+<body>
+    
+    <noscript>
+    	<h1>Baixe no computador ou ative Javascript para executar.</h1>
+    </noscript> 
+    
+    <div class="container">
+        <div class="header">
+            <h1>Soma Boletos</h1>
+            <div class="header-actions">
+            	<button class="btn btn-help" onclick="showHelp()">Ajuda</button>
+                <button class="btn btn-primary" onclick="addManualEntry()">Inserir Valor</button>
+                <button class="btn btn-danger" onclick="clearAll()">Limpar Tudo</button>
+            </div>
+        </div>
+        
+        <div class="status-bar">
+            <div class="last-read">Aguardando leitura...</div>
+            <div class="total-value" onclick="copyTotalValue()">Total: <span id="total-valor">R$ 0,00</span></div>
+        </div>
+
+        <input type="text" class="barcode-input" id="barcodeInput" autocomplete="off">
+
+        <table>
+            <thead>
+                <tr>
+                    <th class="sequence-number">#</th>
+                    <th>Tipo</th>
+                    <th>Código de Barras</th>
+                    <th>Valor</th>
+                    <th>Vencimento</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="readings-table">
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Modal de Ajuda -->
+	<div id="helpModal" class="modal">
+	    <div class="modal-content">
+		<span class="modal-close" onclick="hideHelp()">&times;</span>
+		
+		<div class="help-section">
+		    <h2>Como Usar</h2>
+		    <ul>
+		        <li>Utilize um leitor de código de barras USB compatível</li>
+		        <li>Faça a leitura dos códigos de barras dos documentos que deseja somar</li>
+		        <li>O aplicativo mostrará automaticamente os valores e manterá a soma atualizada</li>
+		        <li>Para valores que precisem ser ajustados (como multas ou descontos), use o botão "Editar"</li>
+		        <li>Documentos vencidos são destacados em vermelho para facilitar sua identificação</li>
+		        <li>Se precisar incluir um valor manualmente ou se a leitura não for possível, use o botão "Inserir Valor"</li>
+		        <li>Clique no total para copiar o valor para a área de transferência</li>
+		    </ul>
+		</div>
+
+		<div class="help-section">
+		    <h2>Importante</h2>
+		    <ul>
+		        <li>O aplicativo mostra apenas os valores originais dos documentos</li>
+		        <li>Não são calculados automaticamente descontos, abatimentos, juros ou multas
+		        </li>
+		        <li>Para documentos vencidos (destacados em vermelho), você deve:
+		            <ul>
+		                <li>Verificar se o documento realmente está vencido</li>
+		                <li>Calcular os juros e multas aplicáveis</li>
+		                <li>Usar o botão "Editar" para inserir o valor atualizado</li>
+		            </ul>
+		        </li>
+		    </ul>
+		    
+		    <h2>Informações sobre boletos com vencimento após 21/02/2025</h2>
+		    <p>
+		    O aplicativo está preparado para exibir corretamente o vencimento de boletos após 21/02/2025 conforme resolução da Febraban FB-009/2023, que trata sobre o atingimento do valor de 9999 no fator de vencimento do código de barras.<br />
+		    Entretanto, nem todos os sistemas proprietários de emissão de boletos foram atualizados para se adequar às regras da Febraban, causando erro na exibição do vencimento.<br />
+		    Para estes documentos, considerar o vencimento impresso no documento.
+		    </p>
+		    
+		</div>
+
+
+
+		<div class="about-section">
+		    <p>Versão 1.1 &#8226; <a href="http://github.com/gutocabral">GitHub</a></p>
+		</div>
+	    </div>
+	</div>
+
+
+
+    
+
+    <script>
+        let readings = [];
+        
+        let activeEdit = false;
+        
+        function showHelp() {
+	    document.getElementById('helpModal').style.display = 'block';
+	}
+
+	function hideHelp() {
+	    document.getElementById('helpModal').style.display = 'none';
+	    document.getElementById('scannerInput').focus();
+	}
+
+	// Fechar modal quando clicar fora
+	window.onclick = function(event) {
+	    const modal = document.getElementById('helpModal');
+	    if (event.target == modal) {
+		hideHelp();
+	    }
+	}
+
+	// Fechar modal com ESC
+	document.addEventListener('keydown', function(event) {
+	    if (event.key === 'Escape' && document.getElementById('helpModal').style.display === 'block') {
+		hideHelp();
+	    }
+	});
+
+        function calculateDueDate(factorStr) {
+            const baseDate = new Date('1997-10-07');
+            let factor = parseInt(factorStr);
+            
+            if (factor < 9000) {
+                const newBaseDate = new Date('2025-02-22');
+                return new Date(newBaseDate.setDate(newBaseDate.getDate() + (factor - 1000 + 1)));
+            }
+            
+            const dueDate = new Date(baseDate);
+            dueDate.setDate(baseDate.getDate() + factor + 1);
+            return dueDate;
+        }
+
+        function extractFromBarcode(barcode) {
+            barcode = barcode.replace(/[^0-9]/g, '');
+            
+            if (barcode.length !== 44) {
+                throw new Error('Código de barras inválido: deve ter 44 dígitos');
+            }
+
+            const firstDigit = parseInt(barcode.charAt(0));
+            let value, type, dueDate = null;
+            
+            if (firstDigit === 8) {
+                const rawValue = barcode.substring(4, 15);
+                value = parseInt(rawValue) / 100;
+                type = 'convenio';
+            } else {
+                const rawValue = barcode.substring(9, 19);
+                value = parseInt(rawValue) / 100;
+                type = 'boleto';
+                
+                const dueFactor = barcode.substring(5, 9);
+                dueDate = calculateDueDate(dueFactor);
+            }
+
+            return {
+                originalBarcode: barcode,
+                value: value,
+                originalValue: value,
+                type: type,
+                formattedValue: value.toLocaleString('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL'
+                }),
+                dueDate: dueDate,
+                dueDateFormatted: dueDate ? dueDate.toLocaleDateString('pt-BR') : null,
+                isModified: false
+            };
+        }
+
+        function isDuplicate(barcode) {
+            return readings.some(reading => reading.originalBarcode === barcode);
+        }
+
+        function isExpired(dueDate) {
+            if (!dueDate) return false;
+            return new Date() > dueDate;
+        }
+
+        function formatCurrency(value) {
+            return value.toLocaleString('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+            });
+        }
+
+        function showNotification(message, type) {
+            const statusBar = document.querySelector('.status-bar');
+            const lastRead = document.querySelector('.last-read');
+            
+            statusBar.classList.remove('success', 'error');
+            statusBar.classList.add(type);
+            lastRead.textContent = message;
+            
+            setTimeout(() => {
+                statusBar.classList.remove('success', 'error');
+            }, 3000);
+        }
+
+        function updateTotal() {
+            const totalValor = readings.reduce((acc, curr) => acc + curr.value, 0);
+            document.getElementById('total-valor').textContent = formatCurrency(totalValor);
+        }
+
+        function copyTotalValue() {
+            const totalValor = document.getElementById('total-valor').textContent;
+            navigator.clipboard.writeText(totalValor).then(() => {
+                showNotification('Valor total copiado para a área de transferência', 'success');
+            });
+        }
+
+        function enableEdit(index) {
+        
+            updateTable();
+            
+            const row = document.querySelector(`tr[data-index="${index}"]`);
+            const valueCell = row.querySelector('td:nth-child(4)');
+            const currentValue = readings[index].value;
+            
+            activeEdit = true;
+            
+            valueCell.innerHTML = `
+                <input type="number" step="0.01" class="value-input" value="${currentValue}" />
+                <button class="btn btn-edit" onclick="saveEdit(${index})">✓</button>
+            `;
+            
+            const input = valueCell.querySelector('.value-input');
+            input.focus();
+            input.select();
+
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    saveEdit(index);
+                } else if (e.key === 'Escape') {
+                    updateTable();
+                }
+            });
+        }
+
+        function saveEdit(index) {
+            const row = document.querySelector(`tr[data-index="${index}"]`);
+            const input = row.querySelector('.value-input');
+            const newValue = parseFloat(input.value);
+            
+            if (isNaN(newValue) || newValue <= 0) {
+                showNotification('Valor inválido', 'error');
+                return;
+            }
+            
+            readings[index].value = newValue;
+            readings[index].formattedValue = formatCurrency(newValue);
+            readings[index].isModified = newValue !== readings[index].originalValue;
+            
+            updateTable();
+            updateTotal();
+            showNotification('Valor atualizado com sucesso', 'success');
+        }
+
+        function revertValue(index) {
+            readings[index].value = readings[index].originalValue;
+            readings[index].formattedValue = formatCurrency(readings[index].originalValue);
+            readings[index].isModified = false;
+            
+            updateTable();
+            updateTotal();
+            showNotification('Valor revertido com sucesso', 'success');
+        }
+
+        function removeReading(index) {
+            const reading = readings[index];
+            if (!reading.isManual) {
+            }
+            readings.splice(index, 1);
+            updateTable();
+            updateTotal();
+            showNotification('Registro excluído', 'success');
+        }
+
+        function clearAll() {
+            readings = [];
+            updateTable();
+            updateTotal();
+            document.querySelector('.last-read').textContent = 'Aguardando leitura...';
+            showNotification('Todos os registros foram limpos', 'success');
+        }
+
+        function addManualEntry() {
+            const manualReading = {
+                type: 'manual',
+                value: 0,
+                originalValue: 0,
+                formattedValue: formatCurrency(0),
+                isModified: false
+            };
+            
+            readings.unshift(manualReading);
+            updateTable();
+            enableEdit(0);
+        }
+
+        function updateTable() {
+            const tbody = document.getElementById('readings-table');
+            tbody.innerHTML = '';
+            
+            activeEdit = false;
+            focusInput();
+            
+            readings.forEach((reading, index) => {
+                const row = document.createElement('tr');
+                row.setAttribute('data-index', index);
+                
+                const isExpiredBoleto = reading.type === 'boleto' && isExpired(reading.dueDate);
+                const valueClass = reading.isModified ? 'modified-value' : '';
+                const revertButton = reading.isModified && reading.type !== 'manual' ? 
+                    `<span class="revert-value" onclick="revertValue(${index})">↺</span>` : '';
+                
+                row.innerHTML = `
+                    <td class="sequence-number">${readings.length - index}</td>
+                    <td>${reading.type === 'boleto' ? 'Boleto' : reading.type === 'convenio' ? 'Convênio' : 'Manual'}</td>
+                    <td>${reading.originalBarcode || '-'}</td>
+                    <td class="${valueClass}">${reading.formattedValue}${revertButton}</td>
+                    <td class="${isExpiredBoleto ? 'expired' : ''}">${reading.dueDateFormatted || '-'}</td>
+                    <td class="action-buttons">
+                        <button class="btn btn-delete" onclick="removeReading(${index})">Excluir</button>
+                        ${reading.type !== 'manual' ? 
+                            `<button class="btn btn-edit" onclick="enableEdit(${index})">Editar</button>` : 
+                            `<button class="btn btn-edit" onclick="enableEdit(${index})">Editar</button>`}
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+
+        function processBarcode(barcode) {
+            try {
+                barcode = barcode.replace(/[^0-9]/g, '');
+                
+                if (isDuplicate(barcode)) {
+                    showNotification('Este documento já foi capturado', 'error');
+                    return;
+                }
+                
+                const reading = extractFromBarcode(barcode);
+                readings.unshift(reading);
+                updateTable();
+                updateTotal();
+                
+                showNotification(`Documento capturado: ${reading.formattedValue}`, 'success');
+            } catch (error) {
+                showNotification(error.message, 'error');
+            }
+        }
+
+        // Melhorar captura do scanner
+        const barcodeInput = document.getElementById('barcodeInput');
+        
+        function focusInput() {
+            if (!activeEdit) barcodeInput.focus();
+        }
+
+        barcodeInput.addEventListener('input', function(e) {
+            const value = e.target.value;
+            if (value.endsWith('#') && value.length > 1) {
+                //console.log(value)
+                const barcode = value;
+                processBarcode(barcode);
+                e.target.value = '';
+            }
+        });
+
+        // Manter foco no input
+        document.addEventListener('click', focusInput);
+        window.addEventListener('focus', focusInput);
+        focusInput();
+    </script>
+</body>
+</html>
