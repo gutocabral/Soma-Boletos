@@ -180,6 +180,15 @@
             background-color: #5a6268;
         }
 
+        .btn-settings {
+            background-color: #17a2b8;
+            color: white;
+        }
+
+        .btn-settings:hover {
+            background-color: #138496;
+        }
+
         .modal {
             display: none;
             position: fixed;
@@ -254,6 +263,36 @@
             text-decoration: underline;
         }
 
+        .settings-section {
+            margin-bottom: 20px;
+        }
+
+        .settings-section h3 {
+            color: #0066cc;
+            margin-bottom: 10px;
+        }
+
+        .settings-section label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .settings-section select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .settings-section p {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+            line-height: 1.4;
+        }
+
     </style>
     
     <noscript>
@@ -273,6 +312,7 @@
         <div class="header">
             <h1>Soma Boletos</h1>
             <div class="header-actions">
+                <button class="btn btn-settings" onclick="showSettings()">Ajustes</button>
             	<button class="btn btn-help" onclick="showHelp()">Ajuda</button>
                 <button class="btn btn-primary" onclick="addManualEntry()">Inserir Valor</button>
                 <button class="btn btn-danger" onclick="clearAll()">Limpar Tudo</button>
@@ -302,6 +342,24 @@
         </table>
     </div>
     
+    <!-- Modal de Ajustes -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="hideSettings()">&times;</span>
+            
+            <h2>Ajustes</h2>
+            
+            <div class="settings-section">
+                <h3>Data Base para Vencimento</h3>
+                <label for="baseDateSelect">Considerar vencidos os boletos com vencimento anterior a:</label>
+                <select id="baseDateSelect" onchange="updateBaseDate()">
+                </select>
+                <p>Esta configuração define qual data será usada como referência para identificar boletos vencidos.<br />
+                <strong>Deve ser ajustado manualmente quando houver feriado</strong>, considerando que boletos com vencimento neste caso são postergados para o próximo dia útil.</p>
+            </div>
+        </div>
+    </div>
+    
     <!-- Modal de Ajuda -->
 	<div id="helpModal" class="modal">
 	    <div class="modal-content">
@@ -317,6 +375,7 @@
 		        <li>Documentos vencidos são destacados em vermelho para facilitar sua identificação</li>
 		        <li>Se precisar incluir um valor manualmente ou se a leitura não for possível, use o botão "Inserir Valor"</li>
 		        <li>Clique no total para copiar o valor para a área de transferência</li>
+		        <li>Use o botão "Ajustes" para configurar a data base para identificação de vencimentos</li>
 		    </ul>
 		</div>
 
@@ -347,7 +406,7 @@
 
 
 		<div class="about-section">
-		    <p>Versão 1.1 &#8226; <a href="http://github.com/gutocabral">GitHub</a></p>
+		    <p>Versão 1.2 &#8226; <a href="http://github.com/gutocabral">GitHub</a></p>
 		</div>
 	    </div>
 	</div>
@@ -358,8 +417,73 @@
 
     <script>
         let readings = [];
-        
         let activeEdit = false;
+        let baseDate = new Date(); // Data base para vencimento
+        
+        // Inicializar data base
+        function initializeBaseDate() {
+            const today = new Date();
+            const dayOfWeek = today.getDay(); // 0 = domingo, 1 = segunda, ..., 6 = sábado
+            
+            if (dayOfWeek === 1) { // Segunda-feira
+                // Definir como sábado anterior
+                const saturday = new Date(today);
+                saturday.setDate(today.getDate() - 2);
+                baseDate = saturday;
+            } else {
+                baseDate = today;
+            }
+            
+            populateBaseDateOptions();
+        }
+        
+        // Popular opções do seletor de data base
+        function populateBaseDateOptions() {
+            const select = document.getElementById('baseDateSelect');
+            select.innerHTML = '';
+            
+            const today = new Date();
+            const weekDays = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+            const strToday = '(Hoje)';
+            
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(today);
+                date.setDate(today.getDate() - i);
+                
+                const dayName = weekDays[date.getDay()];
+                const dateStr = date.toLocaleDateString('pt-BR');
+                const optionText = (i==0) ? `${dayName}, ${dateStr}  ${strToday}` : `${dayName}, ${dateStr} `;
+                
+                const option = document.createElement('option');
+                option.value = date.toISOString().split('T')[0];
+                option.textContent = optionText;
+                
+                // Selecionar a data base atual
+                if (date.toDateString() === baseDate.toDateString()) {
+                    option.selected = true;
+                }
+                
+                select.appendChild(option);
+            }
+        }
+        
+        // Atualizar data base
+        function updateBaseDate() {
+            const select = document.getElementById('baseDateSelect');
+            baseDate = new Date(select.value + 'T00:00:00');
+            updateTable(); // Reprocessar a tabela para atualizar os vencidos
+        }
+        
+        function showSettings() {
+            document.getElementById('settingsModal').style.display = 'block';
+            activeEdit = true;
+        }
+
+        function hideSettings() {
+            document.getElementById('settingsModal').style.display = 'none';
+            activeEdit = false;
+            focusInput();
+        }
         
         function showHelp() {
 	    document.getElementById('helpModal').style.display = 'block';
@@ -367,21 +491,30 @@
 
 	function hideHelp() {
 	    document.getElementById('helpModal').style.display = 'none';
-	    document.getElementById('scannerInput').focus();
+	    focusInput();
 	}
 
 	// Fechar modal quando clicar fora
 	window.onclick = function(event) {
-	    const modal = document.getElementById('helpModal');
-	    if (event.target == modal) {
+	    const helpModal = document.getElementById('helpModal');
+	    const settingsModal = document.getElementById('settingsModal');
+	    if (event.target == helpModal) {
 		hideHelp();
+	    }
+	    if (event.target == settingsModal) {
+		hideSettings();
 	    }
 	}
 
 	// Fechar modal com ESC
 	document.addEventListener('keydown', function(event) {
-	    if (event.key === 'Escape' && document.getElementById('helpModal').style.display === 'block') {
-		hideHelp();
+	    if (event.key === 'Escape') {
+	        if (document.getElementById('helpModal').style.display === 'block') {
+	            hideHelp();
+	        }
+	        if (document.getElementById('settingsModal').style.display === 'block') {
+	            hideSettings();
+	        }
 	    }
 	});
 
@@ -443,7 +576,8 @@
 
         function isExpired(dueDate) {
             if (!dueDate) return false;
-            return new Date() > dueDate;
+            // Usar a data base configurada ao invés da data atual
+            return dueDate < baseDate;
         }
 
         function formatCurrency(value) {
@@ -502,6 +636,8 @@
                     saveEdit(index);
                 } else if (e.key === 'Escape') {
                     updateTable();
+                    activeEdit = false;
+                    focusInput();
                 }
             });
         }
@@ -522,6 +658,8 @@
             
             updateTable();
             updateTotal();
+            activeEdit = false;
+            focusInput();
             showNotification('Valor atualizado com sucesso', 'success');
         }
 
@@ -571,7 +709,7 @@
             const tbody = document.getElementById('readings-table');
             tbody.innerHTML = '';
             
-            activeEdit = false;
+            //activeEdit = false;
             focusInput();
             
             readings.forEach((reading, index) => {
@@ -641,6 +779,9 @@
         // Manter foco no input
         document.addEventListener('click', focusInput);
         window.addEventListener('focus', focusInput);
+        
+        // Inicializar aplicação
+        initializeBaseDate();
         focusInput();
     </script>
 </body>
