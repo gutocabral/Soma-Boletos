@@ -406,7 +406,7 @@
 
 
 		<div class="about-section">
-		    <p>Versão 1.2 &#8226; <a href="http://github.com/gutocabral">GitHub</a></p>
+		    <p>Versão 1.2.1 &#8226; <a href="http://github.com/gutocabral">GitHub</a></p>
 		</div>
 	    </div>
 	</div>
@@ -680,6 +680,8 @@
             readings.splice(index, 1);
             updateTable();
             updateTotal();
+            activeEdit = false;
+            focusInput();
             showNotification('Registro excluído', 'success');
         }
 
